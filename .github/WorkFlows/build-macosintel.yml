@@ -1,0 +1,43 @@
+name: Build VoxelCore macOS intel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-13   # Intel x86_64 runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install cmake ninja pkg-config \
+            glfw glew glm libpng libvorbis lua luajit libcurl openal-soft freetype openssl@3
+
+      - name: Configure project
+        env:
+          PKG_CONFIG_PATH: |
+            $(brew --prefix)/opt/openssl@3/lib/pkgconfig:$(brew --prefix)/opt/luajit/lib/pkgconfig
+        run: |
+          mkdir -p build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix);$(brew --prefix openssl@3)" \
+            ..
+
+      - name: Build
+        run: |
+          cmake --build build --parallel
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxelcore-macos-intel
+          path: build/VoxelCore
